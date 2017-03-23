@@ -21,6 +21,7 @@ thing and where lots of modern tools don't even work....*
 
 Right now the software should be used directly from Git. It's early days.
 
+    # Install dependencies if needed... `pip3 install --user gevent paramiko pyyaml`
     git clone --recursive git://github.com/ssssam/nighttrain
 
 ## Configuration
