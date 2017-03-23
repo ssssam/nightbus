@@ -4,7 +4,7 @@ Night Train is a minimalist build automation tool. It requires nothing on the
 build machines but a shell, an SSH server and your build dependencies.
 It's intended for automating slow processes that need to run on multiple
 machines and was written initially for building and testing the GNU toolchain
-on various architectures[1].
+on various architectures<sup>1</sup>.
 
 Night Train is written in Python 3, and reads configuration from YAML format
 files. It's built on top of the
@@ -14,8 +14,8 @@ heavily inspired by the
 management tool, with the main difference being that Night Train provides
 real-time logging of the tasks as they execute.
 
-1. including some obsolete proprietary ones where dependency hell is still a
-   thing and which lots of modern tools just don't support.
+*1. including the old proprietary platforms where dependency hell is still a
+thing and where lots of modern tools don't even work....*
 
 ## Installation
 
