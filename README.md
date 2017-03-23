@@ -1,4 +1,4 @@
-# Night Train: simple SSH-based build automation
+# Night Train: Simple SSH-based build automation
 
 Night Train is a minimalist build automation tool. It requires nothing on the
 build machines but a shell, an SSH server and your build dependencies.
