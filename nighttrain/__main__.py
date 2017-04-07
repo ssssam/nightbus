@@ -85,8 +85,8 @@ def ensure_list(string_or_list):
         return string_or_list
 
 
-def name_task_run(task_name):
-    return time.strftime('%Y.%m.%d-%H.%M.%S-' + task_name)
+def name_session():
+    return time.strftime('%Y.%m.%d-%H.%M.%S')
 
 
 def run_single_command(client, hosts, command):
@@ -100,14 +100,15 @@ def run_single_command(client, hosts, command):
         print("[%s] Exit code: %i" % (host, output[host].exit_code))
 
 
-def run_task(client, hosts, task, log_directory, force=False):
-    '''Run a single task on all the specified hosts.'''
-    task_run_name = name_task_run(task['name'])
-    logging.info("%s: Starting task run", task_run_name)
+def safe_filename(filename):
+    # If you want to escape more characters, switch to using re.sub()
+    return filename.replace('/', '_')
 
-    log_dir = os.path.join(log_directory, task_run_name)
-    os.makedirs(log_dir, exist_ok=False)
-    logging.info("%s: Created log directory: %s", task_run_name, log_dir)
+
+def run_task(client, hosts, task, log_directory, name=None, force=False):
+    '''Run a single task on all the specified hosts.'''
+    name = name or task['name']
+    logging.info("%s: Starting task run", name)
 
     # Run the commands asynchronously on all hosts.
     cmd = task['commands']
@@ -127,7 +128,8 @@ def run_task(client, hosts, task, log_directory, force=False):
     # The output is still all buffered into memory by ParallelSSH which is not
     # ideal for long running GCC builds and such.
     def log_output(output, host):
-        log = os.path.join(log_dir, host + '.log')
+        log_filename = safe_filename(name + '.' + host + '.log')
+        log = os.path.join(log_directory, log_filename)
         with open(log, 'w') as f:
             for line in output[host].stdout:
                 f.write(line)
@@ -135,17 +137,15 @@ def run_task(client, hosts, task, log_directory, force=False):
 
     read_jobs = [gevent.spawn(log_output, output, host) for host in hosts]
 
-    gevent.joinall(read_jobs)
+    gevent.joinall(read_jobs, raise_error=True)
 
-    logging.info("%s: Started all jobs, waiting for them to finish",
-        task_run_name)
+    logging.info("%s: Started all jobs, waiting for them to finish", name)
     client.join(output)
-    logging.info("%s: All jobs finished", task_run_name)
+    logging.info("%s: All jobs finished", name)
 
     failed_hosts = [host for host in hosts if output[host].exit_code != 0]
     if failed_hosts:
-        msg = "Task %s failed on: %s" % (task_run_name,
-                                         ', '.join(failed_hosts))
+        msg = "Task %s failed on: %s" % (name, ', '.join(failed_hosts))
         logging.error(msg)
         raise RuntimeError(msg)
 
@@ -176,14 +176,22 @@ def main():
         run_single_command(client, hosts, args.command)
         return
 
+    session_name = name_session()
+
+    log_directory = os.path.join(args.log_directory, session_name)
+    os.makedirs(log_directory, exist_ok=False)
+    logging.info("Created log directory: %s", log_directory)
+
     # Loop through each task sequentially. We only want to run one task on a
     # host at a time, as we assume it'll maximize at least one of available CPU,
     # RAM and IO. However, if fast hosts could move onto the next task before
     # slow hosts have finished with the previous one it might be nice.
+    task_number = 1
     for task in tasks:
         if task['name'] in tasks_to_run:
-            run_task(client, hosts, task,
-                log_directory=args.log_directory, force=args.force)
+            task_name = '%i.%s' % (task_number, task['name'])
+            run_task(client, hosts, task, log_directory=log_directory,
+                name=task_name, force=args.force)
 
 
 try:
