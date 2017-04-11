@@ -18,6 +18,7 @@ import gevent
 import pssh
 
 import argparse
+import collections
 import logging
 import os
 import sys
@@ -107,8 +108,11 @@ def safe_filename(filename):
 
 def run_task(client, hosts, task, log_directory, name=None, force=False):
     '''Run a single task on all the specified hosts.'''
+
     name = name or task['name']
     logging.info("%s: Starting task run", name)
+
+    start_time = time.time()
 
     # Run the commands asynchronously on all hosts.
     cmd = task['commands']
@@ -117,37 +121,88 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
         cmd = 'force=yes\n' + cmd
     output = client.run_command(cmd, shell=shell, stop_on_errors=True)
 
-    # ParallelSSH doesn't give us a way to run a callback for each line of
-    # output received. It does have an internal logger for the remote output
-    # but there's no clean way to divide the output into different files. We
-    # could chain or zip the generators we receive but that way we'll only
-    # receive output at the speed that the slowest host sends it back. Instead,
-    # we use GEvent Greenlets to read the output for each host independently.
-    # Think of it as like threads except they're not.
-    #
-    # The output is still all buffered into memory by ParallelSSH which is not
-    # ideal for long running GCC builds and such.
-    def log_output(output, host):
+    # ParallelSSH doesn't give us a way to run a callback when the host
+    # produces output or the command completes. In order to stream the
+    # output into separate log files, we run a Greenlet to monitor each
+    # host.
+    def watch_output(output, host):
         log_filename = safe_filename(name + '.' + host + '.log')
         log = os.path.join(log_directory, log_filename)
         with open(log, 'w') as f:
             for line in output[host].stdout:
                 f.write(line)
                 f.write('\n')
+        duration = time.time() - start_time
+        exit_code = output[host].exit_code
+        return nighttrain.tasks.TaskResult(
+            name, host, duration=duration, exit_code=exit_code)
 
-    read_jobs = [gevent.spawn(log_output, output, host) for host in hosts]
+    watchers = [gevent.spawn(watch_output, output, host) for host in hosts]
 
-    gevent.joinall(read_jobs, raise_error=True)
+    gevent.joinall(watchers, raise_error=True)
 
     logging.info("%s: Started all jobs, waiting for them to finish", name)
     client.join(output)
     logging.info("%s: All jobs finished", name)
 
-    failed_hosts = [host for host in hosts if output[host].exit_code != 0]
-    if failed_hosts:
-        msg = "Task %s failed on: %s" % (name, ', '.join(failed_hosts))
-        logging.error(msg)
-        raise RuntimeError(msg)
+    results = [watcher.value for watcher in watchers]
+    return {result.host: result for result in results}
+
+
+def run_all_tasks(client, hosts, tasks, log_directory, force=False):
+    '''Loop through each task sequentially.
+
+    We only want to run one task on a host at a time, as we assume it'll
+    maximize at least one of available CPU, RAM and IO. However, if fast hosts
+    could move onto the next task before slow hosts have finished with the
+    previous one it might be nice.
+
+    '''
+    all_results = collections.OrderedDict()
+    number = 1
+    for task in tasks:
+        name = '%i.%s' % (number, task['name'])
+
+        result_dict = run_task(
+            client, hosts, task, log_directory=log_directory,
+            name=name, force=force)
+
+        all_results[name] = result_dict
+
+        failed_hosts = [t.host for t in result_dict.values() if t.exit_code!=0]
+
+        if failed_hosts:
+            msg = "Task %s failed on: %s" % (
+                name, ', '.join(failed_hosts))
+            logging.error(msg)
+            raise RuntimeError(msg)
+
+        number += 1
+    return all_results
+
+
+def duration_as_string(seconds):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return ("%d:%02d:%02d" % (h, m, s))
+
+
+def write_report(filename, all_results):
+    '''Write a report containing task results and durations.'''
+    with open(filename, 'w') as f:
+        first_line = True
+        for task_name, task_results in all_results.items():
+            if first_line:
+                first_line = False
+            else:
+                f.write("\n")
+
+            f.write("%s:\n", task_name)
+
+            for host, result in task_results.items():
+                status = "succeeded" if result.exit_code == 0 else "failed"
+                duration = duration_as_string(result.duration)
+                f.write("  - %s: %s in %s\n" % (host, status, duration))
 
 
 def main():
@@ -182,16 +237,16 @@ def main():
     os.makedirs(log_directory, exist_ok=False)
     logging.info("Created log directory: %s", log_directory)
 
-    # Loop through each task sequentially. We only want to run one task on a
-    # host at a time, as we assume it'll maximize at least one of available CPU,
-    # RAM and IO. However, if fast hosts could move onto the next task before
-    # slow hosts have finished with the previous one it might be nice.
-    task_number = 1
-    for task in tasks:
-        if task['name'] in tasks_to_run:
-            task_name = '%i.%s' % (task_number, task['name'])
-            run_task(client, hosts, task, log_directory=log_directory,
-                name=task_name, force=args.force)
+    results = []
+    try:
+        results = run_all_tasks(
+            client, hosts, [t for t in tasks if t['name'] in tasks_to_run],
+            log_directory=log_directory, force=args.force)
+    finally:
+        if results:
+            report_filename = os.path.join(log_directory, 'report')
+            logging.info("Writing report to: %s", report_filename)
+            write_report(report_filename, results)
 
 
 try:

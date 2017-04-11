@@ -25,3 +25,12 @@ class TaskList(list):
 
     def names(self):
         return [task['name'] for task in self]
+
+
+class TaskResult():
+    '''Results of executing a one task on one host.'''
+    def __init__(self, name, host, duration=None, exit_code=None):
+        self.name = name
+        self.host = host
+        self.duration = duration
+        self.exit_code = exit_code
