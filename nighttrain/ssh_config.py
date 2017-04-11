@@ -21,9 +21,8 @@ import os
 
 class SSHConfig(dict):
     '''Dict holding SSH configuration to access each host'''
-    def __init__(self, filename):
-        with open(filename) as f:
-            self.update(yaml.safe_load(f))
+    def __init__(self, text):
+        self.update(yaml.safe_load(text))
 
         self._load_private_keys()
 
