@@ -148,6 +148,7 @@ def main():
 
 try:
     main()
-except (RuntimeError, pssh.exceptions.ConnectionErrorException) as e:
+except (RuntimeError, pssh.exceptions.ConnectionErrorException,
+        pssh.exceptions.AuthenticationException) as e:
     sys.stderr.write("ERROR: %s\n" % e)
     sys.exit(1)
