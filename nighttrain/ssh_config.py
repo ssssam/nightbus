@@ -24,6 +24,10 @@ class SSHConfig(dict):
     def __init__(self, text):
         self.update(yaml.safe_load(text))
 
+        for key in self:
+            if self[key] == None:
+                self[key] = dict()
+
         self._load_private_keys()
 
     def _load_private_keys(self):
