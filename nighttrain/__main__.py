@@ -143,7 +143,7 @@ def main():
             report_filename = os.path.join(log_directory, 'report')
             logging.info("Writing report to: %s", report_filename)
             with open(report_filename, 'w') as f:
-                nighttrain.tasks.write_report(report_filename, results)
+                nighttrain.tasks.write_report(f, results)
 
 
 try:
