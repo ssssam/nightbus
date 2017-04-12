@@ -16,6 +16,7 @@
 
 import pytest
 
+import io
 import os
 import sys
 
@@ -30,11 +31,6 @@ embedded_pssh_lib_dir = os.path.join(package_dir, '..', 'parallel-ssh')
 sys.path = [package_dir, embedded_pssh_lib_dir] + sys.path
 import pssh
 from embedded_server import embedded_server
-
-EXAMPLE_TASKS = '''
-- name: print-hello
-  commands: echo "hello"
-'''
 
 @pytest.fixture
 def example_hosts():
@@ -66,24 +62,55 @@ def example_hosts():
     return hosts
 
 
-def test_main(example_hosts, tmpdir):
-    '''Basic test that the core functions work.'''
+def test_success_simple(example_hosts, tmpdir):
+    '''Basic test of a task that should succeed.'''
+    TASKS = '''
+    - name: print-hello
+      commands: echo "hello"
+    '''
 
-    tasks = nighttrain.tasks.TaskList(EXAMPLE_TASKS)
+    tasks = nighttrain.tasks.TaskList(TASKS)
     hosts = nighttrain.ssh_config.SSHConfig(example_hosts)
 
     client = pssh.ParallelSSHClient(hosts, host_config=hosts)
 
-    results = {}
-    try:
-        results = nighttrain.tasks.run_all_tasks(
-            client, hosts, tasks, log_directory=str(tmpdir))
-    finally:
-        if results:
-            report_filename = os.path.join(str(tmpdir), 'report')
-            with open(report_filename, 'w') as f:
-                nighttrain.tasks.write_report(f, results)
+    results = nighttrain.tasks.run_all_tasks(
+        client, hosts, tasks, log_directory=str(tmpdir))
+
+    report_buffer = io.StringIO()
+    nighttrain.tasks.write_report(report_buffer, results)
+    report = report_buffer.getvalue()
 
     assert sorted(os.listdir(str(tmpdir))) == [
-        '1.print-hello.127.0.0.1.log', '1.print-hello.127.0.0.2.log', 'report'
+        '1.print-hello.127.0.0.1.log', '1.print-hello.127.0.0.2.log'
     ]
+
+    assert '127.0.0.1: succeeded' in report
+    assert '127.0.0.2: succeeded' in report
+
+
+def test_failure_simple(example_hosts, tmpdir):
+    '''Basic test of a task that should fail.'''
+    TASKS = '''
+    - name: print-hello
+      commands: exit 1
+    '''
+
+    tasks = nighttrain.tasks.TaskList(TASKS)
+    hosts = nighttrain.ssh_config.SSHConfig(example_hosts)
+
+    client = pssh.ParallelSSHClient(hosts, host_config=hosts)
+
+    results = nighttrain.tasks.run_all_tasks(
+        client, hosts, tasks, log_directory=str(tmpdir))
+
+    report_buffer = io.StringIO()
+    nighttrain.tasks.write_report(report_buffer, results)
+    report = report_buffer.getvalue()
+
+    assert sorted(os.listdir(str(tmpdir))) == [
+        '1.print-hello.127.0.0.1.log', '1.print-hello.127.0.0.2.log'
+    ]
+
+    assert '127.0.0.1: failed' in report
+    assert '127.0.0.2: failed' in report

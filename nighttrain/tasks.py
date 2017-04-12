@@ -118,7 +118,7 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False):
             msg = "Task %s failed on: %s" % (
                 name, ', '.join(failed_hosts))
             logging.error(msg)
-            raise RuntimeError(msg)
+            break
 
         number += 1
     return all_results
