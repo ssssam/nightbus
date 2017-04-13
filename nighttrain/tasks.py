@@ -23,6 +23,7 @@ import os
 import time
 
 import nighttrain
+from nighttrain.utils import ensure_list
 
 
 class TaskList(list):
@@ -53,9 +54,16 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
 
     # Run the commands asynchronously on all hosts.
     cmd = task['commands']
-    shell = task.get('shell')
+
+    includes = ensure_list(task.get('include'))
+    for include in reversed(includes):
+        with open(include) as f:
+            cmd = f.read() + '\n' + cmd
+
     if force:
         cmd = 'force=yes\n' + cmd
+
+    shell = task.get('shell')
     output = client.run_command(cmd, shell=shell, stop_on_errors=True)
 
     # ParallelSSH doesn't give us a way to run a callback when the host

@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Night Train: Simple SSH-based build automation'''
 
-from . import ssh_config
-from . import tasks
-from . import utils
+'''Utility functions.'''
+
+
+def ensure_list(string_or_list):
+    if isinstance(string_or_list, str):
+        return [string_or_list]
+    else:
+        return string_or_list

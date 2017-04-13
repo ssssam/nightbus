@@ -23,6 +23,7 @@ import sys
 import time
 
 import nighttrain
+from nighttrain.utils import ensure_list
 
 
 def argument_parser():
@@ -75,13 +76,6 @@ def check_args(args):
         if not os.access(args.log_directory, os.W_OK):
             raise RuntimeError("Log directory %s doesn't appear writable" %
                                args.log_directory)
-
-
-def ensure_list(string_or_list):
-    if isinstance(string_or_list, str):
-        return [string_or_list]
-    else:
-        return string_or_list
 
 
 def name_session():
