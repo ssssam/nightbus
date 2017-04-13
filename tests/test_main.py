@@ -65,6 +65,7 @@ def example_hosts():
 def test_success_simple(example_hosts, tmpdir):
     '''Basic test of a task that should succeed.'''
     TASKS = '''
+    tasks:
     - name: print-hello
       commands: echo "hello"
     '''
@@ -92,6 +93,7 @@ def test_success_simple(example_hosts, tmpdir):
 def test_failure_simple(example_hosts, tmpdir):
     '''Basic test of a task that should fail.'''
     TASKS = '''
+    tasks:
     - name: print-hello
       commands: exit 1
     '''

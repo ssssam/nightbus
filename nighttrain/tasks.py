@@ -29,7 +29,13 @@ from nighttrain.utils import ensure_list
 class TaskList(list):
     '''Contains a user-specified list of descriptions of tasks to run.'''
     def __init__(self, text):
-        self.extend(yaml.safe_load(text))
+        contents = yaml.safe_load(text)
+        if isinstance(contents, list):
+            self.extend(contents)
+        elif isinstance(contents, dict):
+            self.extend(contents['tasks'])
+        else:
+            raise RuntimeError("Tasks file is invalid.")
 
     def names(self):
         return [task['name'] for task in self]

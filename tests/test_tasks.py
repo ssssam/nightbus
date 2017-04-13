@@ -19,11 +19,22 @@ import nighttrain
 
 def test_simple():
     '''Basic test of task list parser.'''
-    TASKS = '''
+
+    tasklist = nighttrain.tasks.TaskList('''
+    tasks:
     - name: print-hello
       commands: echo "hello"
-    '''
+    ''')
 
-    tasklist = nighttrain.tasks.TaskList(TASKS)
+    assert tasklist.names() == ['print-hello']
 
-    assert tasklist.names == ['print-hello']
+
+def test_no_tasks_header():
+    '''The task list is allowed to just be a list.'''
+
+    tasklist = nighttrain.tasks.TaskList('''
+    - name: print-hello
+      commands: echo "hello"
+    ''')
+
+    assert tasklist.names() == ['print-hello']
