@@ -121,7 +121,7 @@ def main():
     tasks_to_run = ensure_list(args.tasks) or tasks.names()
     logging.info("Selected tasks: %s", ','.join(tasks_to_run))
 
-    client = pssh.ParallelSSHClient(hosts, host_config=host_config)
+    client = pssh.ParallelSSHClient(hosts, forward_ssh_agent=False, host_config=host_config)
 
     if args.command:
         run_single_command(client, hosts, args.command)
