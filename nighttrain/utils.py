@@ -16,8 +16,8 @@
 '''Utility functions.'''
 
 
-def ensure_list(string_or_list):
-    if isinstance(string_or_list, str):
-        return [string_or_list]
+def ensure_list(string_or_list_or_none):
+    if isinstance(string_or_list_or_none, str):
+        return [string_or_list_or_none]
     else:
-        return string_or_list
+        return string_or_list_or_none or []
