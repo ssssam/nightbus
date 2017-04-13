@@ -16,6 +16,9 @@
 
 import nighttrain
 
+import os
+import tempfile
+
 
 def test_simple():
     '''Basic test of task list parser.'''
@@ -38,3 +41,33 @@ def test_no_tasks_header():
     ''')
 
     assert tasklist.names() == ['print-hello']
+
+
+def test_include(tmpdir):
+    '''Include one or more files before the task itself.'''
+
+    tasks_template = '''
+    - name: print-hello
+      include: %s
+      commands: echo "hello"
+    - name: print-hello-2
+      include: [ %s, %s ]
+      commands: echo "hello"
+    '''
+
+    def temporary_file(text):
+        f = tempfile.NamedTemporaryFile(dir=str(tmpdir), mode='w')
+        f.write(text)
+        f.seek(0)
+        return f
+
+    include_1 = temporary_file('echo "I am included"')
+    include_2 = temporary_file('echo "I am also included"')
+
+    tasks = tasks_template % (include_1.name, include_1.name, include_2.name)
+
+    tasklist = nighttrain.tasks.TaskList(tasks)
+
+    assert tasklist[0].script == 'echo "I am included"\necho "hello"'
+    assert tasklist[1].script == \
+        'echo "I am included"\necho "I am also included"\necho "hello"'

@@ -26,19 +26,40 @@ import nighttrain
 from nighttrain.utils import ensure_list
 
 
+class Task():
+    '''A single task that we can run on one or more hosts.'''
+    def __init__(self, attrs):
+        self.name = attrs['name']
+        self.script = self._script(
+            attrs['commands'], includes=ensure_list(attrs.get('include')))
+        # This gets passed straight to ParallelSSHClient.run_command()
+        # so it's no problem for its value to be `None`.
+        self.shell = attrs.get('shell')
+
+    def _script(self, commands, includes=None):
+        '''Generate the script that executes this task.'''
+        parts = []
+        for include in includes:
+            with open(include) as f:
+                parts.append(f.read())
+        parts.append(commands)
+        return '\n'.join(parts)
+
+
 class TaskList(list):
     '''Contains a user-specified list of descriptions of tasks to run.'''
     def __init__(self, text):
         contents = yaml.safe_load(text)
+
         if isinstance(contents, list):
-            self.extend(contents)
+            self.extend(Task(entry) for entry in contents)
         elif isinstance(contents, dict):
-            self.extend(contents['tasks'])
+            self.extend(Task(entry) for entry in contents['tasks'])
         else:
             raise RuntimeError("Tasks file is invalid.")
 
     def names(self):
-        return [task['name'] for task in self]
+        return [task.name for task in self]
 
 
 class TaskResult():
@@ -59,17 +80,12 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
     start_time = time.time()
 
     # Run the commands asynchronously on all hosts.
-    cmd = task['commands']
-
-    includes = ensure_list(task.get('include'))
-    for include in reversed(includes):
-        with open(include) as f:
-            cmd = f.read() + '\n' + cmd
+    cmd = task.script
 
     if force:
         cmd = 'force=yes\n' + cmd
 
-    shell = task.get('shell')
+    shell = task.shell
     output = client.run_command(cmd, shell=shell, stop_on_errors=True)
 
     # ParallelSSH doesn't give us a way to run a callback when the host
@@ -117,7 +133,7 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False):
     all_results = collections.OrderedDict()
     number = 1
     for task in tasks:
-        name = '%i.%s' % (number, task['name'])
+        name = '%i.%s' % (number, task.name)
 
         result_dict = run_task(
             client, hosts, task, log_directory=log_directory,
