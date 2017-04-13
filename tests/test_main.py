@@ -56,10 +56,7 @@ def example_hosts():
         %s: { port: %s }
     ''' % (server_host_1, server_listen_port_1, server_host_2, server_listen_port_2)
 
-    # Now it gets a bit ugly. ParallelSSH doesn't let us override the hostname
-    # of a given server. The hostname for both of these is 127.0.0.
-
-    return hosts
+    return nighttrain.ssh_config.SSHConfig(hosts)
 
 
 def test_success_simple(example_hosts, tmpdir):
@@ -71,12 +68,11 @@ def test_success_simple(example_hosts, tmpdir):
     '''
 
     tasks = nighttrain.tasks.TaskList(TASKS)
-    hosts = nighttrain.ssh_config.SSHConfig(example_hosts)
 
-    client = pssh.ParallelSSHClient(hosts, host_config=hosts)
+    client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
 
     results = nighttrain.tasks.run_all_tasks(
-        client, hosts, tasks, log_directory=str(tmpdir))
+        client, example_hosts, tasks, log_directory=str(tmpdir))
 
     report_buffer = io.StringIO()
     nighttrain.tasks.write_report(report_buffer, results)
@@ -99,12 +95,10 @@ def test_failure_simple(example_hosts, tmpdir):
     '''
 
     tasks = nighttrain.tasks.TaskList(TASKS)
-    hosts = nighttrain.ssh_config.SSHConfig(example_hosts)
 
-    client = pssh.ParallelSSHClient(hosts, host_config=hosts)
-
+    client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
     results = nighttrain.tasks.run_all_tasks(
-        client, hosts, tasks, log_directory=str(tmpdir))
+        client, example_hosts, tasks, log_directory=str(tmpdir))
 
     report_buffer = io.StringIO()
     nighttrain.tasks.write_report(report_buffer, results)
@@ -116,3 +110,34 @@ def test_failure_simple(example_hosts, tmpdir):
 
     assert '127.0.0.1: failed' in report
     assert '127.0.0.2: failed' in report
+
+
+def test_messages(example_hosts, tmpdir):
+    '''A task can log messages that end up in the report file.'''
+
+    TASKS = '''
+    tasks:
+    - name: messages
+      commands: |
+        echo "This message isn't shown."
+        echo "##nighttrain This message is the same for all hosts"
+        echo "##nighttrain This message is different per host: $(date +%N)"
+    '''
+
+    tasks = nighttrain.tasks.TaskList(TASKS)
+
+    client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
+    results = nighttrain.tasks.run_all_tasks(
+        client, example_hosts, tasks, log_directory=str(tmpdir))
+
+    report_buffer = io.StringIO()
+    nighttrain.tasks.write_report(report_buffer, results)
+    report = report_buffer.getvalue()
+
+    report_lines = report.splitlines(0)
+    assert report_lines[0] == '1.messages:'
+    assert report_lines[1] == '  This message is the same for all hosts'
+    assert report_lines[2].startswith('  - 127.0.0.1: succeeded in')
+    assert report_lines[3].startswith('    This message is different per host:')
+    assert report_lines[4].startswith('  - 127.0.0.2: succeeded in')
+    assert report_lines[5].startswith('    This message is different per host:')

@@ -73,11 +73,12 @@ class TaskList(list):
 
 class TaskResult():
     '''Results of executing a one task on one host.'''
-    def __init__(self, name, host, duration=None, exit_code=None):
+    def __init__(self, name, host, duration=None, exit_code=None, message_list=None):
         self.name = name
         self.host = host
         self.duration = duration
         self.exit_code = exit_code
+        self.message_list = message_list
 
 
 def run_task(client, hosts, task, log_directory, name=None, force=False):
@@ -104,14 +105,19 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
     def watch_output(output, host):
         log_filename = safe_filename(name + '.' + host + '.log')
         log = os.path.join(log_directory, log_filename)
+
+        messages = []
         with open(log, 'w') as f:
             for line in output[host].stdout:
                 f.write(line)
                 f.write('\n')
+                if line.startswith('##nighttrain '):
+                    messages.append(line[len('##nighttrain '):])
+
         duration = time.time() - start_time
         exit_code = output[host].exit_code
         return nighttrain.tasks.TaskResult(
-            name, host, duration=duration, exit_code=exit_code)
+            name, host, duration=duration, exit_code=exit_code, message_list=messages)
 
     watchers = [gevent.spawn(watch_output, output, host) for host in hosts]
 
@@ -121,8 +127,11 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
     client.join(output)
     logging.info("%s: All jobs finished", name)
 
-    results = [watcher.value for watcher in watchers]
-    return {result.host: result for result in results}
+    results = collections.OrderedDict()
+    for result in sorted((watcher.value for watcher in watchers),
+                         key=lambda result: result.host):
+        results[result.host] = result
+    return results
 
 
 def safe_filename(filename):
@@ -169,6 +178,66 @@ def duration_as_string(seconds):
     return ("%d:%02d:%02d" % (h, m, s))
 
 
+def filter_messages_for_task(task_results):
+    '''Separate out messages which occured on all hosts.
+
+    Returns a tuple of (global_messages, host_messages):
+
+        global_messages: messages which appeared in the output of every host
+        host_messages: a dictionary per host of messages that appeared on that
+            host but didn't appear on every host.
+    '''
+    host_list = list(task_results.keys())
+    first_host = host_list[0]
+
+    if len(host_list) == 1:
+        message_list = task_results[first_host].message_list
+        return message_list, {first_host: message_list}
+    else:
+        other_hosts = host_list[1:]
+        unprocessed_messages = {host: collections.deque(result.message_list)
+                                for host, result in task_results.items()}
+
+        global_messages = []
+        host_messages = {host:[] for host in host_list}
+
+        # This algorithm isn't smart and will not scale well to lots of
+        # messages.
+
+        while unprocessed_messages[first_host]:
+            # Take the first message, and search for it in all the other
+            # message streams.
+            message = unprocessed_messages[first_host].popleft()
+            is_global = True
+            for host in other_hosts:
+                for host_message in unprocessed_messages[host]:
+                    if message == host_message:
+                        break
+                else:
+                    is_global = False
+                if not is_global:
+                    break
+
+            if is_global:
+                global_messages.append(message)
+                # Now remove this message from the other hosts' message lists,
+                # plus anything we find before that (which we take to be host
+                # specific messages).
+                for host in other_hosts:
+                    while len(unprocessed_messages[host]) > 0:
+                        host_message = unprocessed_messages[host].popleft()
+                        if host_message == message:
+                            break
+                        host_messages[host].append(host_message)
+            else:
+                host_messages[first_host].append(message)
+
+        for host in other_hosts:
+            host_messages[host] += unprocessed_messages[host]
+
+        return global_messages, host_messages
+
+
 def write_report(f, all_results):
     '''Write a report containing task results and durations.'''
     first_line = True
@@ -180,7 +249,14 @@ def write_report(f, all_results):
 
         f.write("%s:\n" % task_name)
 
+        global_messages, host_messages = filter_messages_for_task(task_results)
+
+        for message in global_messages:
+            f.write("  %s\n" % message)
+
         for host, result in task_results.items():
             status = "succeeded" if result.exit_code == 0 else "failed"
             duration = duration_as_string(result.duration)
             f.write("  - %s: %s in %s\n" % (host, status, duration))
+            for message in host_messages[host]:
+                f.write("    %s\n" % message)
