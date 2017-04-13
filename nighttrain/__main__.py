@@ -130,7 +130,7 @@ def main():
     results = []
     try:
         results = nighttrain.tasks.run_all_tasks(
-            client, hosts, [t for t in tasks if t['name'] in tasks_to_run],
+            client, hosts, [t for t in tasks if t.name in tasks_to_run],
             log_directory=log_directory, force=args.force)
     finally:
         if results:
