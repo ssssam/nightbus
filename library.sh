@@ -16,15 +16,19 @@
 # Part of the Night Train automation tool.
 
 
+# We use `(cd $checkoutdir; git COMMAND)` rather than `git -C $checkoutdir
+# COMMAND` because the -C option isn't present in old versions of Git. For
+# example CentOS 7 has Git 1.8 and that lacks the -C option.
+
 ensure_git_remote() {
     checkoutdir="$1"
     name="$2"
     url="$3"
 
-    if git -C "$checkoutdir" remote get-url "$name"; then
-        git -C "$checkoutdir" remote set-url "$name" "$url"
+    if (cd "$checkoutdir"; git remote get-url "$name"); then
+        (cd "$checkoutdir"; git remote set-url "$name" "$url")
     else
-        git -C "$checkoutdir" remote add "$name" "$url"
+        (cd "$checkoutdir"; git remote add "$name" "$url")
     fi
 }
 
@@ -49,8 +53,8 @@ ensure_git_tag_checkout() {
     mkdir -p "$checkoutdir"
     if [ -e "$checkoutdir/.git" ]; then
         ensure_git_remote "$checkoutdir" "$remote_name" "$remote_url"
-        git -C "$checkoutdir" remote update "$remote_name"
-        git -C "$checkoutdir" checkout "$remote_ref"
+        (cd "$checkoutdir"; git remote update "$remote_name")
+        (cd "$checkoutdir"; git checkout "$remote_ref")
     else
         git clone "$remote_url" --branch="$remote_ref" --origin "$remote_name" "$checkoutdir"
     fi
@@ -83,9 +87,9 @@ ensure_uptodate_git_branch_checkout() {
         ensure_git_remote "$checkoutdir" "$remote_name" "$remote_url"
 
         remote_ref="$remote/$track"
-        git -C "$checkoutdir" checkout "$remote_ref"
+        (cd "$checkoutdir"; git checkout "$remote_ref")
 
-        output=$(git -C "$checkoutdir" pull "$remote" "$track")
+        output=$(cd "$checkoutdir"; git pull "$remote" "$track")
         if echo "$output" | grep -q 'Already up-to-date'; then
             return 1   # No changes
         else
