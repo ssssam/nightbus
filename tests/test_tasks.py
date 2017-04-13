@@ -43,10 +43,32 @@ def test_no_tasks_header():
     assert tasklist.names() == ['print-hello']
 
 
+def test_defaults():
+    '''Set an attribute that applies to all tasks in the task list.'''
+
+    tasks = '''
+    defaults:
+      shell: bash -l -c
+    tasks:
+      - name: print-hello
+        commands: echo "hello"
+      - name: say-goodbye
+        commands: echo "goodbye"
+    '''
+
+    tasklist = nighttrain.tasks.TaskList(tasks)
+
+    assert tasklist[0].shell == 'bash -l -c'
+    assert tasklist[1].shell == 'bash -l -c'
+
+
 def test_include(tmpdir):
     '''Include one or more files before the task itself.'''
 
     tasks_template = '''
+    defaults:
+      include: %s
+    tasks:
     - name: print-hello
       include: %s
       commands: echo "hello"
@@ -61,13 +83,15 @@ def test_include(tmpdir):
         f.seek(0)
         return f
 
-    include_1 = temporary_file('echo "I am included"')
-    include_2 = temporary_file('echo "I am also included"')
+    include_1 = temporary_file('set -e')
+    include_2 = temporary_file('echo "I am included"')
+    include_3 = temporary_file('echo "I am also included"')
 
-    tasks = tasks_template % (include_1.name, include_1.name, include_2.name)
+    tasks = tasks_template % (include_1.name, include_2.name, include_2.name,
+                              include_3.name)
 
     tasklist = nighttrain.tasks.TaskList(tasks)
 
-    assert tasklist[0].script == 'echo "I am included"\necho "hello"'
+    assert tasklist[0].script == 'set -e\necho "I am included"\necho "hello"'
     assert tasklist[1].script == \
-        'echo "I am included"\necho "I am also included"\necho "hello"'
+        'set -e\necho "I am included"\necho "I am also included"\necho "hello"'

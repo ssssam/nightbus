@@ -28,13 +28,20 @@ from nighttrain.utils import ensure_list
 
 class Task():
     '''A single task that we can run on one or more hosts.'''
-    def __init__(self, attrs):
+    def __init__(self, attrs, defaults=None):
+        defaults = defaults or {}
+
         self.name = attrs['name']
+
+        includes = ensure_list(defaults.get('include')) + \
+                   ensure_list(attrs.get('include'))
+
         self.script = self._script(
-            attrs['commands'], includes=ensure_list(attrs.get('include')))
+            attrs['commands'], includes=includes)
+
         # This gets passed straight to ParallelSSHClient.run_command()
         # so it's no problem for its value to be `None`.
-        self.shell = attrs.get('shell')
+        self.shell = attrs.get('shell', defaults.get('shell'))
 
     def _script(self, commands, includes=None):
         '''Generate the script that executes this task.'''
@@ -54,7 +61,9 @@ class TaskList(list):
         if isinstance(contents, list):
             self.extend(Task(entry) for entry in contents)
         elif isinstance(contents, dict):
-            self.extend(Task(entry) for entry in contents['tasks'])
+            defaults = contents.get('defaults', {})
+            self.extend(Task(entry, defaults=defaults)
+                        for entry in contents['tasks'])
         else:
             raise RuntimeError("Tasks file is invalid.")
 
