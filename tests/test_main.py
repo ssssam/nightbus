@@ -36,8 +36,7 @@ from embedded_server import embedded_server
 def example_hosts():
     '''Fixture providing two temporary SSH servers
 
-    Returns a string describing the server locations, suitable for the
-    nighttrain.ssh_config.SSHConfig() class to parse.
+    Returns a nighttrain.ssh_config.SSHConfig instance.
 
     '''
     server_host_1 = '127.0.0.1'
