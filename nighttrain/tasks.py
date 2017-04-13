@@ -153,22 +153,28 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False):
     for task in tasks:
         name = '%i.%s' % (number, task.name)
 
-        result_dict = run_task(
-            client, hosts, task, log_directory=log_directory,
-            name=name, force=force)
+        try:
+            result_dict = run_task(
+                client, hosts, task, log_directory=log_directory,
+                name=name, force=force)
+            all_results[name] = result_dict
 
-        all_results[name] = result_dict
+            failed_hosts = [t.host for t in result_dict.values()
+                            if t.exit_code != 0]
 
-        failed_hosts = [t.host for t in result_dict.values()
-                        if t.exit_code != 0]
+            if failed_hosts:
+                msg = "Task %s failed on: %s" % (
+                    name, ', '.join(failed_hosts))
+                logging.error(msg)
+                break
 
-        if failed_hosts:
-            msg = "Task %s failed on: %s" % (
-                name, ', '.join(failed_hosts))
-            logging.error(msg)
+            number += 1
+        except KeyboardInterrupt:
+            # If any tasks finished then we should write a report, even if later
+            # tasks got interrupted. Thus we must KeyboardInterrupt here so
+            # that previous results are returned.
+            logging.info("Received KeyboardInterrupt")
             break
-
-        number += 1
     return all_results
 
 
