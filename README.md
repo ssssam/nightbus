@@ -159,6 +159,27 @@ here](https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
 We use a fork of Parallel-SSH, due to needing a better fix for:
 https://github.com/ParallelSSH/parallel-ssh/pull/78
 
+## Why not use...
+
+### Ansible or Fabric?
+
+Ansible can't give us live output from the tasks, it just sends the whole log
+over once the task completes. For jobs that can take hours and hours like
+running the GCC test suite this is a major limitation.
+
+At time of writing the Ansible team have looked at adding this feature and
+decided against it: https://github.com/ansible/ansible/issues/3887
+
+Fabric also appears not to have such a feature, and no discussion of it.
+
+[cdist](http://www.nico.schottelius.org/software/cdist/)
+also has nice aspects but its design really ties it to doing configuration management 
+rather than build+test automation.
+
+### Gitlab CI?
+
+Gitlab CI requires a [client program written in Go](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner) on each build machine. Go is not supported on every platform, for example [AIX](https://groups.google.com/forum/#!topic/golang-nuts/ByTFX0mxloE).
+
 ## License
 
 Copyright 2017 Codethink Ltd.
