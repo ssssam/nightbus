@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Primary test cases for Night Train automation tool.'''
+'''Primary test cases for Night Bus automation tool.'''
 
 import pytest
 
@@ -20,7 +20,7 @@ import io
 import os
 import sys
 
-import nighttrain
+import nightbus
 
 # Include parallel-ssh submodule in search path.
 # As well as getting us the version of parallel-ssh with our local
@@ -36,7 +36,7 @@ from embedded_server import embedded_server
 def example_hosts():
     '''Fixture providing two temporary SSH servers
 
-    Returns a nighttrain.ssh_config.SSHConfig instance.
+    Returns a nightbus.ssh_config.SSHConfig instance.
 
     '''
     server_host_1 = '127.0.0.1'
@@ -55,7 +55,7 @@ def example_hosts():
         %s: { port: %s }
     ''' % (server_host_1, server_listen_port_1, server_host_2, server_listen_port_2)
 
-    return nighttrain.ssh_config.SSHConfig(hosts)
+    return nightbus.ssh_config.SSHConfig(hosts)
 
 
 def test_success_simple(example_hosts, tmpdir):
@@ -66,15 +66,15 @@ def test_success_simple(example_hosts, tmpdir):
       commands: echo "hello"
     '''
 
-    tasks = nighttrain.tasks.TaskList(TASKS)
+    tasks = nightbus.tasks.TaskList(TASKS)
 
     client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
 
-    results = nighttrain.tasks.run_all_tasks(
+    results = nightbus.tasks.run_all_tasks(
         client, example_hosts, tasks, log_directory=str(tmpdir))
 
     report_buffer = io.StringIO()
-    nighttrain.tasks.write_report(report_buffer, results)
+    nightbus.tasks.write_report(report_buffer, results)
     report = report_buffer.getvalue()
 
     assert sorted(os.listdir(str(tmpdir))) == [
@@ -93,14 +93,14 @@ def test_failure_simple(example_hosts, tmpdir):
       commands: exit 1
     '''
 
-    tasks = nighttrain.tasks.TaskList(TASKS)
+    tasks = nightbus.tasks.TaskList(TASKS)
 
     client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
-    results = nighttrain.tasks.run_all_tasks(
+    results = nightbus.tasks.run_all_tasks(
         client, example_hosts, tasks, log_directory=str(tmpdir))
 
     report_buffer = io.StringIO()
-    nighttrain.tasks.write_report(report_buffer, results)
+    nightbus.tasks.write_report(report_buffer, results)
     report = report_buffer.getvalue()
 
     assert sorted(os.listdir(str(tmpdir))) == [
@@ -119,18 +119,18 @@ def test_messages(example_hosts, tmpdir):
     - name: messages
       commands: |
         echo "This message isn't shown."
-        echo "##nighttrain This message is the same for all hosts"
-        echo "##nighttrain This message is different per host: $(date +%N)"
+        echo "##nightbus This message is the same for all hosts"
+        echo "##nightbus This message is different per host: $(date +%N)"
     '''
 
-    tasks = nighttrain.tasks.TaskList(TASKS)
+    tasks = nightbus.tasks.TaskList(TASKS)
 
     client = pssh.ParallelSSHClient(example_hosts, host_config=example_hosts)
-    results = nighttrain.tasks.run_all_tasks(
+    results = nightbus.tasks.run_all_tasks(
         client, example_hosts, tasks, log_directory=str(tmpdir))
 
     report_buffer = io.StringIO()
-    nighttrain.tasks.write_report(report_buffer, results)
+    nightbus.tasks.write_report(report_buffer, results)
     report = report_buffer.getvalue()
 
     report_lines = report.splitlines(0)

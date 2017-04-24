@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Library of helper functions to be used when writing automation tasks.
-# Part of the Night Train automation tool.
+# Part of the Night Bus automation tool.
 
 
 # We use `(cd $checkoutdir; git COMMAND)` rather than `git -C $checkoutdir

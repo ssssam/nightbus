@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-'''Night Train: Simple SSH-based build automation'''
+'''Night Bus: Simple SSH-based build automation'''
 
 import os
 import runpy
@@ -26,4 +26,4 @@ package_dir = os.path.dirname(__file__)
 embedded_pssh_lib_dir = os.path.join(package_dir, 'parallel-ssh')
 sys.path = [package_dir, embedded_pssh_lib_dir] + sys.path
 
-runpy.run_module('nighttrain')
+runpy.run_module('nightbus')

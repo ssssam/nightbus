@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Night Train: Simple SSH-based build automation'''
+'''Night Bus: Simple SSH-based build automation'''
 
 from . import ssh_config
 from . import tasks

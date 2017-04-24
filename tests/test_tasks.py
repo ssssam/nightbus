@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Test cases for Night Train task descriptions.'''
+'''Test cases for Night Bus task descriptions.'''
 
-import nighttrain
+import nightbus
 
 import os
 import tempfile
@@ -23,7 +23,7 @@ import tempfile
 def test_simple():
     '''Basic test of task list parser.'''
 
-    tasklist = nighttrain.tasks.TaskList('''
+    tasklist = nightbus.tasks.TaskList('''
     tasks:
     - name: print-hello
       commands: echo "hello"
@@ -35,7 +35,7 @@ def test_simple():
 def test_no_tasks_header():
     '''The task list is allowed to just be a list.'''
 
-    tasklist = nighttrain.tasks.TaskList('''
+    tasklist = nightbus.tasks.TaskList('''
     - name: print-hello
       commands: echo "hello"
     ''')
@@ -56,7 +56,7 @@ def test_defaults():
         commands: echo "goodbye"
     '''
 
-    tasklist = nighttrain.tasks.TaskList(tasks)
+    tasklist = nightbus.tasks.TaskList(tasks)
 
     assert tasklist[0].shell == 'bash -l -c'
     assert tasklist[1].shell == 'bash -l -c'
@@ -90,7 +90,7 @@ def test_include(tmpdir):
     tasks = tasks_template % (include_1.name, include_2.name, include_2.name,
                               include_3.name)
 
-    tasklist = nighttrain.tasks.TaskList(tasks)
+    tasklist = nightbus.tasks.TaskList(tasks)
 
     assert tasklist[0].script == 'set -e\necho "I am included"\necho "hello"'
     assert tasklist[1].script == \

@@ -1,17 +1,17 @@
-# Night Train: Simple SSH-based build automation
+# Night Bus: Simple SSH-based build automation
 
-Night Train is a minimalist build automation tool. It requires nothing on the
+Night Bus is a minimalist build automation tool. It requires nothing on the
 build machines but a shell, an SSH server and your build dependencies.
 It's intended for automating slow processes that need to run on multiple
 machines and was written initially for building and testing the GNU toolchain
 on various architectures<sup>1</sup>.
 
-Night Train is written in Python 3, and reads configuration from YAML format
+Night Bus is written in Python 3, and reads configuration from YAML format
 files. It's built on top of the
 [ParallelSSH](https://github.com/ParallelSSH/parallel-ssh) library. It's
 heavily inspired by the
 [Ansible](https://en.wikipedia.org/wiki/Ansible_(software)) configuration
-management tool, with the main difference being that Night Train provides
+management tool, with the main difference being that Night Bus provides
 real-time logging of the tasks as they execute.
 
 *1. including the old proprietary platforms where dependency hell is still a
@@ -22,7 +22,7 @@ thing and where lots of modern tools don't even work....*
 Right now the software should be used directly from Git. It's early days.
 
     # Install dependencies if needed... `pip3 install --user gevent paramiko pyyaml`
-    git clone --recursive git://github.com/ssssam/nighttrain
+    git clone --recursive git://github.com/ssssam/nightbus
 
 ## Configuration
 
@@ -110,7 +110,7 @@ We need a directory to store logs for the tasks. For testing, create one in the
 current directory, and then run the tasks:
 
     mkdir logs
-    ../nighttrain/run.py --log-directory=./logs
+    ../nightbus/run.py --log-directory=./logs
 
 You should see files like this inside the `./logs` directory:
 
@@ -127,7 +127,7 @@ There are some commandline options to help you debug tasks:
 
 ### Deployment
 
-To make logs browsable outside the machine running Night Train, install a
+To make logs browsable outside the machine running Night Bus, install a
 web server and set the log directory to somewhere inside `/var/www`.
 
 To start your builds at a specific time, use Cron or a systemd .timer unit

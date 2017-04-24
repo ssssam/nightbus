@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Night Train: Simple SSH-based build automation'''
+'''Night Bus: Simple SSH-based build automation'''
 
 import gevent
 import yaml
@@ -22,8 +22,8 @@ import logging
 import os
 import time
 
-import nighttrain
-from nighttrain.utils import ensure_list
+import nightbus
+from nightbus.utils import ensure_list
 
 
 class Task():
@@ -111,12 +111,12 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
             for line in output[host].stdout:
                 f.write(line)
                 f.write('\n')
-                if line.startswith('##nighttrain '):
-                    messages.append(line[len('##nighttrain '):])
+                if line.startswith('##nightbus '):
+                    messages.append(line[len('##nightbus '):])
 
         duration = time.time() - start_time
         exit_code = output[host].exit_code
-        return nighttrain.tasks.TaskResult(
+        return nightbus.tasks.TaskResult(
             name, host, duration=duration, exit_code=exit_code, message_list=messages)
 
     watchers = [gevent.spawn(watch_output, output, host) for host in hosts]

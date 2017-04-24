@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Night Train: Simple SSH-based build automation'''
+'''Night Bus: Simple SSH-based build automation'''
 
 import pssh
 
@@ -22,8 +22,8 @@ import os
 import sys
 import time
 
-import nighttrain
-from nighttrain.utils import ensure_list
+import nightbus
+from nightbus.utils import ensure_list
 
 
 def argument_parser():
@@ -99,9 +99,9 @@ def main():
     args = argument_parser().parse_args()
 
     with open('./tasks') as f:
-        tasks = nighttrain.tasks.TaskList(f.read())
+        tasks = nightbus.tasks.TaskList(f.read())
     with open('./hosts') as f:
-        host_config = nighttrain.ssh_config.SSHConfig(f.read())
+        host_config = nightbus.ssh_config.SSHConfig(f.read())
 
     check_args(args)
 
@@ -129,7 +129,7 @@ def main():
 
     results = []
     try:
-        results = nighttrain.tasks.run_all_tasks(
+        results = nightbus.tasks.run_all_tasks(
             client, hosts, [t for t in tasks if t.name in tasks_to_run],
             log_directory=log_directory, force=args.force)
     finally:
@@ -137,7 +137,7 @@ def main():
             report_filename = os.path.join(log_directory, 'report')
             logging.info("Writing report to: %s", report_filename)
             with open(report_filename, 'w') as f:
-                nighttrain.tasks.write_report(f, results)
+                nightbus.tasks.write_report(f, results)
 
 
 try:

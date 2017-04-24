@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Unit tests for nighttrain.ssh_config module'''
+'''Unit tests for nightbus.ssh_config module'''
 
-import nighttrain
+import nightbus
 
 
 def test_simple():
@@ -22,5 +22,5 @@ def test_simple():
     server_1:
     server_2:
     '''
-    config = nighttrain.ssh_config.SSHConfig(text)
+    config = nightbus.ssh_config.SSHConfig(text)
     assert sorted(config.keys()) == ['server_1', 'server_2']
