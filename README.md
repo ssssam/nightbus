@@ -58,9 +58,35 @@ You can test your host configuration by running a test command:
 Now you describe what tasks need to be run. This is done using a file named
 `tasks` which contains an ordered list of tasks.
 
+Here's a simple task file with one pointless task.
+
 ```
-- name: gcc-incremental-build-and-test
-  description: Run an incremental build of GCC
+tasks:
+- name: counting-example
+  commands: |
+    echo "Counting to 20."
+    for i in `seq 1 20`; do
+      echo "Hello $i"
+      sleep 1
+    done
+```
+
+When you run this it'll count to 20 on every host. You can see the results
+on stdout or in the log files in the log directory.
+
+Here's a more advanced example, with some inline comments explaining it.
+
+```
+defaults:
+  # Night Bus comes with a library of shell functions that allow you to write
+  # clearer tasks. You can include anything you want here and it'll be
+  # prepended to each task.
+  include:
+    - nightbus/library.sh
+
+tasks:
+- name: gcc-rebuild
+  description: Run a build of GCC, reusing an existing build tree if present.
   commands: |
     set -e
 
@@ -69,42 +95,43 @@ Now you describe what tasks need to be run. This is done using a file named
     remote=origin
     track=master
 
-    # Update our clone of mainline gcc.git, and exit if there are no changes
-    # FIXME: a `git clone-or-update` wrapper would make this neater.
     echo "Updating clone of $repo branch $track"
-    mkdir -p $sourcedir; cd $sourcedir
-    if [ -e '.git' ]; then
-        git remote set-url $remote $repo
-        git checkout -B $track $remote/$track
-        output=$(git pull $remote $track)
-        if echo $output | grep -q 'Already up-to-date' && [ "$force" != "yes" ] ; then
-            echo "No changes in remote Git repo, exiting."
-            exit 0;
-        fi
+
+    # This helper function comes from nightbus/library.sh and is documented
+    # there. It will clone the repo if necessary and update it if necessary.
+    # It returns false if there were no new changes.
+    if ensure_uptodate_git_branch_checkout "$sourcedir" "$remote" "$repo" "$track" \
+            || [ "$force" = "yes" ] ; then
+        # This only runs if there were new changes in the repo, or if the user
+        # passed `--force` to Night Bus.
+        cd $sourccedir
+        configure_args="--enable-languages=c,c++ --disable-bootstrap"
+
+        echo "Running build"
+        mkdir -p build
+        cd build
+        ../configure $configure_args
+        gmake
     else
-        git clone $repo --branch=$track --origin $remote .
+        echo "No changes in remote Git repo, exiting."
+        exit 0
     fi
 
-    configure_args="--enable-languages=c,c++,fortran --disable-bootstrap"
+- name: gcc-test
+  description: Runs the GCC test suite.
+  commands: |
+    set -e
 
-    echo "Running build"
-    mkdir -p build
-    cd build
-    ../configure $configure_args
-    gmake
+    sourcedir=~/autobuild/gcc-incremental
+    cd $sourcedir/build
 
     echo "Running test suite"
     gmake check
-
-- name: gcc-package
-  description: Run a clean package build of GCC
-  commands: |
-    # Commands go here to build a package of whatever format...
 ```
 
-A task set executes one at a time. So first 'gcc-incremental-build-and-test' runs
-on all hosts. If any hosts fail, the sequences is aborted once the last host has
-finished. If the test was successful, all hosts start the next task 'gcc-package'.
+A task set executes one at a time. So first 'gcc-rebuild' runs on all hosts. If
+any hosts fail, the sequences is aborted once the last host has finished. If
+the test was successful, all hosts start the next task 'gcc-test'.
 
 We need a directory to store logs for the tasks. For testing, create one in the
 current directory, and then run the tasks:
@@ -140,6 +167,7 @@ We like ...
  * ... a small, tidy codebase
  * ... a clean, convenient commandline interface
  * ... no special requirements on the build machines
+ * ... shell scripts which are smaller than 10 lines and can be read at a glance
 
 ## Common issues
 
