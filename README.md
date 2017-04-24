@@ -51,7 +51,7 @@ except for pkey -> private_key.
 
 You can test your host configuration by running a test command:
 
-    ../nightrain/run.py --command 'echo "Hello from $(hostname)"'
+    ../nightbus/run.py --command 'echo "Hello from $(hostname)"'
 
 ### Tasks
 
