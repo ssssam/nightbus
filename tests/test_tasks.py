@@ -98,3 +98,26 @@ def test_include(tmpdir):
     assert tasklist[0].script == 'set -e\necho "I am included"\necho "hello"'
     assert tasklist[1].script == \
         'set -e\necho "I am included"\necho "I am also included"\necho "hello"'
+
+
+def test_parameterize():
+    '''Generate multiple tasks with different parameter values.'''
+
+    tasks = '''
+    - name: test
+      parameters:
+        number: [ 16, 32 ]
+        string:
+          - { repr: 'default', value: '' }
+          - 'other'
+      commands:
+        echo "$number $string"
+    '''
+
+    tasklist = nightbus.tasks.TaskList(tasks)
+
+    assert len(tasklist) == 4
+    assert tasklist[0].name == 'test.16.default'
+    assert tasklist[1].name == 'test.16.other'
+    assert tasklist[2].name == 'test.32.default'
+    assert tasklist[3].name == 'test.32.other'

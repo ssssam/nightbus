@@ -18,6 +18,7 @@ import gevent
 import yaml
 
 import collections
+import itertools
 import logging
 import os
 import time
@@ -28,24 +29,28 @@ from nightbus.utils import ensure_list
 
 class Task():
     '''A single task that we can run on one or more hosts.'''
-    def __init__(self, attrs, defaults=None):
+    def __init__(self, attrs, name=None, defaults=None, parameters=None):
         defaults = defaults or {}
 
-        self.name = attrs['name']
+        self.name = name or attrs['name']
 
         includes = ensure_list(defaults.get('include')) + \
                    ensure_list(attrs.get('include'))
 
         self.script = self._script(
-            attrs['commands'], prologue=defaults.get('prologue'), includes=includes)
+            attrs['commands'], prologue=defaults.get('prologue'),
+            includes=includes, parameters=parameters)
 
         # This gets passed straight to ParallelSSHClient.run_command()
         # so it's no problem for its value to be `None`.
         self.shell = attrs.get('shell', defaults.get('shell'))
 
-    def _script(self, commands, prologue=None, includes=None):
+    def _script(self, commands, prologue=None, includes=None, parameters=None):
         '''Generate the script that executes this task.'''
         parts = []
+        if parameters:
+            for name, value in parameters.items():
+                parts.append('%s=%s' % (name, value))
         if prologue:
             parts.append(prologue)
         for include in includes:
@@ -61,13 +66,65 @@ class TaskList(list):
         contents = yaml.safe_load(text)
 
         if isinstance(contents, list):
-            self.extend(Task(entry) for entry in contents)
+            defaults = None
+            entry_list = contents
         elif isinstance(contents, dict):
             defaults = contents.get('defaults', {})
-            self.extend(Task(entry, defaults=defaults)
-                        for entry in contents['tasks'])
+            entry_list = contents['tasks']
         else:
             raise RuntimeError("Tasks file is invalid.")
+
+        for entry in entry_list:
+            self.extend(self._create_tasks(entry, defaults=defaults))
+
+    def _create_tasks(self, entry, defaults=None):
+        '''Create one or more task objects for a given task list entry.
+
+        There can be more than one Task object for an entry due to the
+        'parameters' option.
+
+        '''
+        if 'parameters' in entry:
+            tasks = []
+            parameters = entry['parameters']
+
+            # Create an iterable for each parameter containing (name, value)
+            # pairs, e.g. (('param', 1), ('param', 2), ('param', 3)).
+            iterables = []
+            for param_name in sorted(parameters.keys()):
+                param_values = parameters[param_name]
+                param_pairs = list(itertools.product([param_name], param_values))
+                iterables.append(param_pairs)
+
+            if len(iterables) > 1:
+                combos = list(itertools.product(*iterables))
+            else:
+                combos = iterables
+
+            def param_repr(value_entry):
+                if isinstance(value_entry, dict):
+                    return value_entry.get('repr', value_entry['value'])
+                else:
+                    return str(value_entry)
+
+            def param_value(value_entry):
+                if isinstance(value_entry, dict):
+                    return value_entry['value']
+                else:
+                    return value_entry
+
+            task_base_name = entry['name']
+            for combo in combos:
+                print(combo)
+                this_parameters = {pair[0]: param_value(pair[1]) for pair in combo}
+                this_parameter_reprs = [param_repr(pair[1]) for pair in combo]
+
+                this_name = '.'.join([task_base_name] + this_parameter_reprs)
+                tasks.append(Task(entry, name=this_name, defaults=defaults,
+                                  parameters=this_parameters))
+        else:
+            tasks = [Task(entry, defaults=defaults)]
+        return tasks
 
     def names(self):
         return [task.name for task in self]
