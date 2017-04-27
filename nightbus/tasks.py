@@ -205,7 +205,8 @@ def safe_filename(filename):
     return filename.replace('/', '_')
 
 
-def run_all_tasks(client, hosts, tasks, log_directory, force=False):
+def run_all_tasks(client, hosts, tasks, log_directory, force=False,
+                  ignore_errors=False):
     '''Loop through each task sequentially.
 
     We only want to run one task on a host at a time, as we assume it'll
@@ -231,8 +232,11 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False):
             if failed_hosts:
                 msg = "Task %s failed on: %s" % (
                     name, ', '.join(failed_hosts))
-                logging.error(msg)
-                break
+                if ignore_errors:
+                    logging.warning(msg)
+                else:
+                    logging.error(msg)
+                    break
 
             number += 1
         except KeyboardInterrupt:

@@ -34,6 +34,9 @@ def argument_parser():
         '--force', action='store_true',
         help="Define 'force=yes' in environment for each task")
     parser.add_argument(
+        '--ignore-errors', action='store_true',
+        help="Continue running tasks even if a previous task failed.")
+    parser.add_argument(
         '--hosts', '--host', type=str,
         help="Select hosts to run on (default: all hosts)")
     parser.add_argument(
@@ -131,7 +134,8 @@ def main():
     try:
         results = nightbus.tasks.run_all_tasks(
             client, hosts, [t for t in tasks if t.name in tasks_to_run],
-            log_directory=log_directory, force=args.force)
+            log_directory=log_directory, force=args.force,
+            ignore_errors=args.ignore_errors)
     finally:
         if results:
             report_filename = os.path.join(log_directory, 'report')
