@@ -90,16 +90,16 @@ git_ensure_uptodate_branch_checkout() {
     checkoutdir="$1"
     remote_name="$2"
     remote_url="$3"
-    track_ref="$4"
+    track="$4"
 
     mkdir -p "$checkoutdir"
     if [ -e "$checkoutdir/.git" ]; then
         git_ensure_remote "$checkoutdir" "$remote_name" "$remote_url"
 
-        remote_ref="$remote/$track"
+        remote_ref="$remote_name/$track"
         (cd "$checkoutdir"; git checkout "$remote_ref")
 
-        output=$(cd "$checkoutdir"; git pull "$remote" "$track")
+        output=$(cd "$checkoutdir"; git pull "$remote_name" "$track")
         if echo "$output" | grep -q 'Already up-to-date'; then
             return 1   # No changes
         else
