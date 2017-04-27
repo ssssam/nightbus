@@ -37,15 +37,17 @@ class Task():
                    ensure_list(attrs.get('include'))
 
         self.script = self._script(
-            attrs['commands'], includes=includes)
+            attrs['commands'], prologue=defaults.get('prologue'), includes=includes)
 
         # This gets passed straight to ParallelSSHClient.run_command()
         # so it's no problem for its value to be `None`.
         self.shell = attrs.get('shell', defaults.get('shell'))
 
-    def _script(self, commands, includes=None):
+    def _script(self, commands, prologue=None, includes=None):
         '''Generate the script that executes this task.'''
         parts = []
+        if prologue:
+            parts.append(prologue)
         for include in includes:
             with open(include) as f:
                 parts.append(f.read())
