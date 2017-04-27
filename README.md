@@ -149,6 +149,7 @@ You can `tail -f` these to see how your build is going.
 There are some commandline options to help you debug tasks:
 
   * `--command`: run a single command on all hosts
+  * `--ignore-errors`: continue running tasks even if some have failed
   * `--force`: adds `force=yes` as the first line of the task.
   * `--tasks`: select a subset of tasks to be executed
 
@@ -159,6 +160,37 @@ web server and set the log directory to somewhere inside `/var/www`.
 
 To start your builds at a specific time, use Cron or a systemd .timer unit
 to execute the `run.py` script appropriately.
+
+### Advanced features
+
+Night Bus supports *parameterization* of tasks. This is inspired by similar
+features in other tools such as [pytest](https://www.pytest.org/).
+
+This input will result in three tasks being generated:
+
+```
+- name: example
+  parameters:
+    person: ['Eleanor', 'Matthew', 'Bill']
+  commands: |
+    echo "Hello, $person"
+```
+
+You can run nightbus `--list` and see them for example:
+
+  * example-Eleanor
+  * example-Matthew
+  * example-Bill
+
+Multiple parameters can be specified, but beware that the code will
+probably not scale well if you start generating hundreds of tasks this way!
+Instead of passing a string for the value, you can pass a dict like this:
+
+    { repr: default, value: '' }
+
+The 'repr' value is used in the task name, while the 'value' is what gets
+used in the task. This is useful if the values you're working with contain
+characters that aren't valid in task names for example.
 
 ## Goals
 
