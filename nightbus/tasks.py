@@ -173,10 +173,10 @@ def run_task(client, hosts, task, log_directory, run_name=None, force=False):
         log = os.path.join(log_directory, log_filename)
 
         messages = []
-        with open(log, 'w', encoding='unicode-escape') as f:
+        with open(log, 'wb') as f:
             for line in output[host].stdout:
-                f.write(line)
-                f.write('\n')
+                f.write(line.encode('unicode-escape'))
+                f.write(b'\n')
                 if line.startswith('##nightbus '):
                     messages.append(line[len('##nightbus '):])
 
