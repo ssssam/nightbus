@@ -20,7 +20,17 @@
 # COMMAND` because the -C option isn't present in old versions of Git. For
 # example CentOS 7 has Git 1.8 and that lacks the -C option.
 
-ensure_git_remote() {
+git_ensure_credentials() {
+    checkoutdir="$1"
+    if ! (cd "$checkoutdir"; git config --get user.name); then
+        (cd "$checkoutdir"; git config --local user.name "Night Bus automation script")
+    fi
+    if ! (cd "$checkoutdir"; git config --get user.email); then
+        (cd "$checkoutdir"; git config --local user.email "nightbus@localhost")
+    fi
+}
+
+git_ensure_remote() {
     checkoutdir="$1"
     name="$2"
     url="$3"
@@ -32,7 +42,7 @@ ensure_git_remote() {
     fi
 }
 
-# ensure_git_tag_checkout():
+# git_ensure_tag_checkout():
 #
 #   Ensures that:
 #
@@ -44,7 +54,7 @@ ensure_git_remote() {
 #   remote just in case they do.
 #
 #   Aborts the program if an unexpected program occurs.
-ensure_git_tag_checkout() {
+git_ensure_tag_checkout() {
     checkoutdir="$1"
     remote_name="$2"
     remote_url="$3"
@@ -52,7 +62,7 @@ ensure_git_tag_checkout() {
 
     mkdir -p "$checkoutdir"
     if [ -e "$checkoutdir/.git" ]; then
-        ensure_git_remote "$checkoutdir" "$remote_name" "$remote_url"
+        git_ensure_remote "$checkoutdir" "$remote_name" "$remote_url"
         (cd "$checkoutdir"; git remote update "$remote_name")
         (cd "$checkoutdir"; git checkout "$remote_ref")
     else
@@ -76,7 +86,7 @@ ensure_git_tag_checkout() {
 #   was already up to date.
 #
 #   Aborts the program if an unexpected error occurs.
-ensure_uptodate_git_branch_checkout() {
+git_ensure_uptodate_branch_checkout() {
     checkoutdir="$1"
     remote_name="$2"
     remote_url="$3"
@@ -84,7 +94,7 @@ ensure_uptodate_git_branch_checkout() {
 
     mkdir -p "$checkoutdir"
     if [ -e "$checkoutdir/.git" ]; then
-        ensure_git_remote "$checkoutdir" "$remote_name" "$remote_url"
+        git_ensure_remote "$checkoutdir" "$remote_name" "$remote_url"
 
         remote_ref="$remote/$track"
         (cd "$checkoutdir"; git checkout "$remote_ref")
@@ -99,4 +109,22 @@ ensure_uptodate_git_branch_checkout() {
         git clone "$remote_url" --branch="$track" --origin "$remote_name" "$checkoutdir"
         return 0
     fi
+}
+
+# git_merge_remote_ref()
+#
+#   Attempts to merge commits from a remote repo into the current working tree.
+#
+#   Returns 0. Aborts the program if an unexpected error occurs.
+git_merge_remote_ref() {
+    checkoutdir="$1"
+    remote_name="$2"
+    remote_url="$3"
+    ref="$4"
+
+    # If Git needs to create a merge commit, it will require that we have a
+    # configured user name and email address.
+    git_ensure_credentials "$checkoutdir"
+    git_ensure_remote "$checkoutdir" "$remote_name" "$remote_url"
+    (cd "$checkoutdir"; git pull --no-edit $remote_name $ref)
 }
