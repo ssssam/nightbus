@@ -83,19 +83,20 @@ class TaskResult():
         self.message_list = message_list
 
 
-def run_task(client, hosts, task, log_directory, name=None, force=False):
+def run_task(client, hosts, task, log_directory, run_name=None, force=False):
     '''Run a single task on all the specified hosts.'''
 
-    name = name or task['name']
-    logging.info("%s: Starting task run", name)
+    name = task.name
+    run_name = run_name or name
+    logging.info("%s: Starting task run", run_name)
 
     start_time = time.time()
 
     # Run the commands asynchronously on all hosts.
-    cmd = task.script
-
+    cmd = 'task_name=%s\n' % name
     if force:
-        cmd = 'force=yes\n' + cmd
+        cmd += 'force=yes\n'
+    cmd += task.script
 
     shell = task.shell
     output = client.run_command(cmd, shell=shell, stop_on_errors=True)
@@ -105,7 +106,7 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
     # output into separate log files, we run a Greenlet to monitor each
     # host.
     def watch_output(output, host):
-        log_filename = safe_filename(name + '.' + host + '.log')
+        log_filename = safe_filename(run_name + '.' + host + '.log')
         log = os.path.join(log_directory, log_filename)
 
         messages = []
@@ -119,15 +120,15 @@ def run_task(client, hosts, task, log_directory, name=None, force=False):
         duration = time.time() - start_time
         exit_code = output[host].exit_code
         return nightbus.tasks.TaskResult(
-            name, host, duration=duration, exit_code=exit_code, message_list=messages)
+            run_name, host, duration=duration, exit_code=exit_code, message_list=messages)
 
     watchers = [gevent.spawn(watch_output, output, host) for host in hosts]
 
     gevent.joinall(watchers, raise_error=True)
 
-    logging.info("%s: Started all jobs, waiting for them to finish", name)
+    logging.info("%s: Started all jobs, waiting for them to finish", run_name)
     client.join(output)
-    logging.info("%s: All jobs finished", name)
+    logging.info("%s: All jobs finished", run_name)
 
     results = collections.OrderedDict()
     for result in sorted((watcher.value for watcher in watchers),
@@ -158,7 +159,7 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False):
         try:
             result_dict = run_task(
                 client, hosts, task, log_directory=log_directory,
-                name=name, force=force)
+                run_name=name, force=force)
             all_results[name] = result_dict
 
             failed_hosts = [t.host for t in result_dict.values()
