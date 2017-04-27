@@ -37,10 +37,10 @@ def argument_parser():
         '--ignore-errors', action='store_true',
         help="Continue running tasks even if a previous task failed.")
     parser.add_argument(
-        '--hosts', '--host', type=str,
+        '--hosts', '--host', action='append',
         help="Select hosts to run on (default: all hosts)")
     parser.add_argument(
-        '--tasks', '--task', '-t', type=str,
+        '--tasks', '--task', '-t', action='append',
         help="Select tasks to run (default: all tasks)")
     parser.add_argument(
         '--log-directory', '-l', type=str, default='/var/log/ci',
@@ -114,7 +114,7 @@ def main():
         print("Available tasks:\n\n  *", '\n  * '.join(tasks.names()))
         return
 
-    hosts = ensure_list(args.hosts) or host_config.keys()
+    hosts = ensure_list(args.hosts, separator=',') or host_config.keys()
     tasks_to_run = ensure_list(args.tasks) or tasks.names()
     logging.info("Selected tasks: %s", ','.join(tasks_to_run))
 

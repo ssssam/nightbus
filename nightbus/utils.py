@@ -16,8 +16,18 @@
 '''Utility functions.'''
 
 
-def ensure_list(string_or_list_or_none):
+import itertools
+
+
+def ensure_list(string_or_list_or_none, separator=None):
     if isinstance(string_or_list_or_none, str):
-        return [string_or_list_or_none]
+        if separator:
+            return string_or_list_or_none.split(separator)
+        else:
+            return [string_or_list_or_none]
     else:
-        return string_or_list_or_none or []
+        if separator:
+            return list(itertools.chain.from_iterable(
+                item.split(separator) for item in string_or_list_or_none))
+        else:
+            return string_or_list_or_none or []
