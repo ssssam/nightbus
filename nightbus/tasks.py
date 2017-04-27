@@ -96,11 +96,17 @@ class TaskList(list):
                 param_pairs = list(itertools.product([param_name], param_values))
                 iterables.append(param_pairs)
 
+            # From that create a list of every combination of parameter values.
             if len(iterables) > 1:
                 combos = list(itertools.product(*iterables))
             else:
                 combos = iterables
 
+            # The value of a parameter can be given literally, or given as a
+            # dict with 'repr' and 'value' keys. The value used in the task may
+            # not be useful when used in the name of the task, it might be an
+            # empty string or contain unprintable characters, so you can set
+            # the `repr` in these cases to something else.
             def param_repr(value_entry):
                 if isinstance(value_entry, dict):
                     return value_entry.get('repr', value_entry['value'])
@@ -113,9 +119,9 @@ class TaskList(list):
                 else:
                     return value_entry
 
+            # Finally generate the Task object for each parameter combination.
             task_base_name = entry['name']
             for combo in combos:
-                print(combo)
                 this_parameters = {pair[0]: param_value(pair[1]) for pair in combo}
                 this_parameter_reprs = [param_repr(pair[1]) for pair in combo]
 
