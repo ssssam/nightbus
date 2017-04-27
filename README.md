@@ -171,6 +171,11 @@ We like ...
 
 ## Common issues
 
+### Debugging errors is hard
+
+Add `set -x` to the top of your task so that the shell prints out each command
+it runs before running it.
+
 ### The tasks don't use the correct PATH, so some programs aren't found
 
 By default, Bash ignores your .profile and .bashrc files when running
