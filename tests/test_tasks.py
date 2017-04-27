@@ -44,11 +44,12 @@ def test_no_tasks_header():
 
 
 def test_defaults():
-    '''Set an attribute that applies to all tasks in the task list.'''
+    '''Set attributes that apply to all tasks in the task list.'''
 
     tasks = '''
     defaults:
       shell: bash -l -c
+      prologue: set -e
     tasks:
       - name: print-hello
         commands: echo "hello"
@@ -59,7 +60,9 @@ def test_defaults():
     tasklist = nightbus.tasks.TaskList(tasks)
 
     assert tasklist[0].shell == 'bash -l -c'
+    assert tasklist[0].script == 'set -e\necho "hello"'
     assert tasklist[1].shell == 'bash -l -c'
+    assert tasklist[1].script == 'set -e\necho "goodbye"'
 
 
 def test_include(tmpdir):
