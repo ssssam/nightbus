@@ -138,7 +138,7 @@ def main():
             ignore_errors=args.ignore_errors)
     finally:
         if results:
-            report_filename = os.path.join(log_directory, 'report')
+            report_filename = os.path.join(log_directory, 'report.txt')
             logging.info("Writing report to: %s", report_filename)
             with open(report_filename, 'w') as f:
                 nightbus.tasks.write_report(f, results)
