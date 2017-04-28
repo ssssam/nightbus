@@ -35,7 +35,7 @@ git_ensure_remote() {
     name="$2"
     url="$3"
 
-    if (cd "$checkoutdir"; git remote get-url "$name"); then
+    if (cd "$checkoutdir"; git remote show -n "$name" > /dev/null 2>&1); then
         (cd "$checkoutdir"; git remote set-url "$name" "$url")
     else
         (cd "$checkoutdir"; git remote add "$name" "$url")
@@ -95,6 +95,7 @@ git_ensure_uptodate_branch_checkout() {
     mkdir -p "$checkoutdir"
     if [ -e "$checkoutdir/.git" ]; then
         git_ensure_remote "$checkoutdir" "$remote_name" "$remote_url"
+        (cd "$checkoutdir"; git remote update "$remote_name")
 
         remote_ref="$remote_name/$track"
         (cd "$checkoutdir"; git checkout "$remote_ref")
