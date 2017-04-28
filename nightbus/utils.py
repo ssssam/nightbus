@@ -25,9 +25,11 @@ def ensure_list(string_or_list_or_none, separator=None):
             return string_or_list_or_none.split(separator)
         else:
             return [string_or_list_or_none]
-    else:
+    elif string_or_list_or_none is not None:
         if separator:
             return list(itertools.chain.from_iterable(
                 item.split(separator) for item in string_or_list_or_none))
         else:
-            return string_or_list_or_none or []
+            return string_or_list_or_none
+    else:
+        return []
