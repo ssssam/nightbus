@@ -100,7 +100,24 @@ def test_include(tmpdir):
         'set -e\necho "I am included"\necho "I am also included"\necho "hello"'
 
 
-def test_parameterize():
+def test_parameterize_one():
+    '''Generate multiple tasks with different parameter values.'''
+
+    tasks = '''
+    - name: test
+      parameters:
+        number: [ 16, 32 ]
+      commands:
+        echo "$number $string"
+    '''
+
+    tasklist = nightbus.tasks.TaskList(tasks)
+
+    assert len(tasklist) == 2
+    assert tasklist[0].name == 'test.16'
+    assert tasklist[1].name == 'test.32'
+
+def test_parameterize_multiple():
     '''Generate multiple tasks with different parameter values.'''
 
     tasks = '''
