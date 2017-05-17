@@ -35,7 +35,7 @@ git_ensure_remote() {
     name="$2"
     url="$3"
 
-    if (cd "$checkoutdir"; git remote show -n "$name" > /dev/null 2>&1); then
+    if (cd "$checkoutdir"; git config --get remote.${name}.url >/dev/null); then
         (cd "$checkoutdir"; git remote set-url "$name" "$url")
     else
         (cd "$checkoutdir"; git remote add "$name" "$url")
