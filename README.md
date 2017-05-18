@@ -241,6 +241,10 @@ Fabric also appears not to have such a feature, and no discussion of it.
 also has nice aspects but its design really ties it to doing configuration management 
 rather than build+test automation.
 
+### BuildBot?
+
+I would recommend [BuildBot](https://buildbot.net/) as the "next step up" from Night Bus.
+
 ### Gitlab CI?
 
 Gitlab CI requires a [client program written in Go](https://gitlab.com/gitlab-org/gitlab-ci-multi-runner) on each build machine. Go is not supported on every platform, for example [AIX](https://groups.google.com/forum/#!topic/golang-nuts/ByTFX0mxloE).
