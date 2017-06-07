@@ -27,6 +27,9 @@ import nightbus
 from nightbus.utils import ensure_list
 
 
+DEFAULT_SHELL = '/bin/bash -c'
+
+
 class Task():
     '''A single task that we can run on one or more hosts.'''
     def __init__(self, attrs, name=None, defaults=None, parameters=None):
@@ -43,7 +46,7 @@ class Task():
 
         # This gets passed straight to ParallelSSHClient.run_command()
         # so it's no problem for its value to be `None`.
-        self.shell = attrs.get('shell', defaults.get('shell'))
+        self.shell = attrs.get('shell', defaults.get('shell', DEFAULT_SHELL))
 
     def _script(self, commands, prologue=None, includes=None, parameters=None):
         '''Generate the script that executes this task.'''
