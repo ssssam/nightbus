@@ -130,8 +130,9 @@ tasks:
 ```
 
 A task set executes one at a time. So first 'gcc-rebuild' runs on all hosts. If
-any hosts fail, the sequences is aborted once the last host has finished. If
-the test was successful, all hosts start the next task 'gcc-test'.
+any hosts fail, those hosts are removed from the list. Once all the task has
+completed on all hosts, the hosts which succeeded will then start the next task
+'gcc-test'. If all hosts fail, the sequence is aborted.
 
 We need a directory to store logs for the tasks. For testing, create one in the
 current directory, and then run the tasks:

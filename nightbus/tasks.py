@@ -205,8 +205,7 @@ def safe_filename(filename):
     return filename.replace('/', '_')
 
 
-def run_all_tasks(client, hosts, tasks, log_directory, force=False,
-                  ignore_errors=False):
+def run_all_tasks(client, hosts, tasks, log_directory, force=False):
     '''Loop through each task sequentially.
 
     We only want to run one task on a host at a time, as we assume it'll
@@ -217,12 +216,13 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False,
     '''
     all_results = collections.OrderedDict()
     number = 1
+    working_hosts = list(hosts)
     for task in tasks:
         name = '%i.%s' % (number, task.name)
 
         try:
             result_dict = run_task(
-                client, hosts, task, log_directory=log_directory,
+                client, working_hosts, task, log_directory=log_directory,
                 run_name=name, force=force)
             all_results[name] = result_dict
 
@@ -230,12 +230,13 @@ def run_all_tasks(client, hosts, tasks, log_directory, force=False,
                             if t.exit_code != 0]
 
             if failed_hosts:
-                msg = "Task %s failed on: %s" % (
-                    name, ', '.join(failed_hosts))
-                if ignore_errors:
-                    logging.warning(msg)
-                else:
-                    logging.error(msg)
+                msg = ("Task %s failed on: %s. No more tasks will run on "
+                       "failed hosts." % (name, ', '.join(failed_hosts)))
+                logging.warning(msg)
+                for host in failed_hosts:
+                    working_hosts.remove(host)
+                if len(working_hosts) == 0:
+                    logging.warning("All hosts have failed, exiting.")
                     break
 
             number += 1
